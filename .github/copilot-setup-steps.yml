@@ -21,6 +21,6 @@ steps:
       npm ci
   - name: Sanity
     run: |
-      npm run -s lint || true
-      npm -s test || true
+      npm run -s lint || echo "::warning::Lint failed during setup"
+      npm -s test || echo "::warning::Tests failed during setup"
 
