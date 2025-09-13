@@ -6,6 +6,7 @@ class PassageApp {
     constructor() {
         this.isRunning = false;
         this.animationFrameId = null;
+        this.respectsReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
     
     /**
@@ -20,7 +21,46 @@ class PassageApp {
         // Reset time manager
         timeManager.reset();
         
+        // Setup keyboard controls for accessibility
+        this.setupKeyboardControls();
+        
         console.log('Passage app initialized');
+    }
+    
+    /**
+     * Setup keyboard controls for accessibility
+     */
+    setupKeyboardControls() {
+        document.addEventListener('keydown', (event) => {
+            switch (event.code) {
+                case 'Space':
+                    event.preventDefault();
+                    if (this.isRunning) {
+                        this.stop();
+                    } else {
+                        this.start();
+                    }
+                    break;
+                case 'KeyR':
+                    event.preventDefault();
+                    this.restart();
+                    break;
+                case 'Escape':
+                    event.preventDefault();
+                    this.stop();
+                    break;
+            }
+        });
+    }
+    
+    /**
+     * Restart the application
+     */
+    restart() {
+        this.stop();
+        timeManager.reset();
+        this.start();
+        console.log('Passage app restarted');
     }
     
     /**
@@ -66,8 +106,10 @@ class PassageApp {
         const deltaTime = timeManager.getDeltaSeconds();
         const elapsedTime = timeManager.getElapsedSeconds();
         
-        // Log elapsed seconds to console as required
-        console.log(`Elapsed: ${elapsedTime.toFixed(2)}s`);
+        // Log elapsed seconds to console as required (but respect reduced motion)
+        if (!this.respectsReducedMotion) {
+            console.log(`Elapsed: ${elapsedTime.toFixed(2)}s`);
+        }
         
         // Render frame
         passageRenderer.render(deltaTime, elapsedTime);

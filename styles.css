@@ -42,4 +42,13 @@ h1 {
     position: relative;
 }
 
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 /* Minimal styling for now, will be expanded as the app develops */

@@ -1,0 +1,25 @@
+{
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "script"
+  },
+  "globals": {
+    "timeManager": "writable",
+    "passageRenderer": "writable",
+    "PassageApp": "writable",
+    "TimeManager": "writable",
+    "PassageRenderer": "writable"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-console": "off",
+    "prefer-const": "error",
+    "no-var": "error",
+    "no-redeclare": "off"
+  }
+}
