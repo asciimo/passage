@@ -1,0 +1,43 @@
+# Git files
+.git
+.gitignore
+
+# Node.js
+node_modules
+npm-debug.log*
+
+# Build artifacts
+dist
+build
+
+# Test output
+coverage
+.nyc_output
+test-results
+playwright-report
+playwright/.cache
+
+# Logs
+*.log
+
+# Temporary files
+tmp
+temp
+scratch
+
+# Editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+README.md
+
+# CI/CD files
+.github
