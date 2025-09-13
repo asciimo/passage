@@ -41,3 +41,9 @@ class PassageRenderer {
 
 // Global renderer instance
 const passageRenderer = new PassageRenderer();
+
+// Make passageRenderer available globally
+globalThis.passageRenderer = passageRenderer;
+
+// Export the class for testing
+export { PassageRenderer };

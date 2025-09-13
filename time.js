@@ -36,3 +36,9 @@ class TimeManager {
 
 // Global time manager instance
 const timeManager = new TimeManager();
+
+// Make timeManager available globally
+globalThis.timeManager = timeManager;
+
+// Export the class for testing
+export { TimeManager };

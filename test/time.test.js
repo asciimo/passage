@@ -1,35 +1,12 @@
 import { test, describe } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { TimeManager } from '../time.js';
 
 // Mock performance.now for testing
 let mockTime = 1000;
 global.performance = {
     now: () => mockTime
 };
-
-// TimeManager class definition for testing (copied from time.js)
-class TimeManager {
-    constructor() {
-        this.startTime = performance.now();
-        this.lastTime = this.startTime;
-    }
-    
-    getElapsedSeconds() {
-        return (performance.now() - this.startTime) / 1000;
-    }
-    
-    getDeltaSeconds() {
-        const currentTime = performance.now();
-        const delta = (currentTime - this.lastTime) / 1000;
-        this.lastTime = currentTime;
-        return delta;
-    }
-    
-    reset() {
-        this.startTime = performance.now();
-        this.lastTime = this.startTime;
-    }
-}
 
 describe('TimeManager', () => {
     test('TimeManager can be instantiated', () => {

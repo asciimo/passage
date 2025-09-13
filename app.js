@@ -119,9 +119,14 @@ class PassageApp {
     }
 }
 
-// Initialize and start the app when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    const app = new PassageApp();
-    app.init();
-    app.start();
-});
+// Initialize and start the app when the page loads (only in browser, not during testing)
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const app = new PassageApp();
+        app.init();
+        app.start();
+    });
+}
+
+// Export the class for testing
+export { PassageApp };
