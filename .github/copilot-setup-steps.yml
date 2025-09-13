@@ -1,0 +1,26 @@
+# Prepares the ephemeral environment Copilot uses while working the issue.
+# Speeds up builds/tests and reduces flaky setup. See GitHub docs.
+# Triggers automatically when Copilot starts its task.
+
+steps:
+  - name: Setup Node
+    uses: actions/setup-node@v4
+    with:
+      node-version: '22'
+
+  - name: Cache node_modules
+    uses: actions/cache@v4
+    with:
+      path: node_modules
+      key: ${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+      restore-keys: |
+        ${{ runner.os }}-node22-
+
+  - name: Install deps
+    run: |
+      npm ci
+  - name: Sanity
+    run: |
+      npm run -s lint || true
+      npm -s test || true
+
