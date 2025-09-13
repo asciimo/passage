@@ -32,29 +32,60 @@ global.cancelAnimationFrame = (id) => {
     }
 };
 
+global.requestAnimationFrame.resetMock = function() {
+    rafCallbacks = [];
+    rafId = 0;
+};
+
+global.requestAnimationFrame.getCallbacks = function() {
+    return rafCallbacks;
+};
+
 let consoleLogs = [];
 global.console = {
     log: (message) => consoleLogs.push(message),
     warn: (message) => consoleLogs.push(`WARN: ${message}`),
-    error: (message) => consoleLogs.push(`ERROR: ${message}`)
+    error: (message) => consoleLogs.push(`ERROR: ${message}`),
+    resetMock: function() {
+        consoleLogs = [];
+    },
+    getLogs: function() {
+        return consoleLogs;
+    }
 };
 
 // Mock performance for time management
 let mockTime = 1000;
 global.performance = {
-    now: () => mockTime
+    now: () => mockTime,
+    resetMock: function() {
+        mockTime = 1000;
+    },
+    setTime: function(time) {
+        mockTime = time;
+    },
+    getTime: function() {
+        return mockTime;
+    }
 };
 
 // Mock the global instances that the app depends on
 global.timeManager = {
-    getElapsedSeconds: () => (mockTime - 1000) / 1000,
+    getElapsedSeconds: () => (global.performance.getTime() - 1000) / 1000,
     getDeltaSeconds: () => 0.016,
-    reset: () => {}
+    reset: () => {},
+    resetMock: function() {
+        // Reset any internal mock state if needed
+    }
 };
 
 global.passageRenderer = {
-    init: () => {},
-    render: () => {}
+    initialized: false,
+    init: function() { this.initialized = true; },
+    render: () => {},
+    resetMock: function() {
+        this.initialized = false;
+    }
 };
 
 // Import the actual classes after setting up mocks
@@ -63,24 +94,12 @@ import { PassageApp } from '../app.js';
 describe('PassageApp', () => {
     // Reset global state before each test
     function resetTestState() {
-        consoleLogs = [];
-        rafCallbacks = [];
-        rafId = 0;
-        mockTime = 1000;
-        
-        // Reset mock timeManager
-        global.timeManager = {
-            getElapsedSeconds: () => (mockTime - 1000) / 1000,
-            getDeltaSeconds: () => 0.016,
-            reset: () => {}
-        };
-        
-        // Reset mock passageRenderer
-        global.passageRenderer = {
-            initialized: false,
-            init: function() { this.initialized = true; },
-            render: () => {}
-        };
+        // Reset mocks using their reset methods
+        global.performance.resetMock();
+        global.requestAnimationFrame.resetMock();
+        global.console.resetMock();
+        global.timeManager.resetMock();
+        global.passageRenderer.resetMock();
     }
     
     test('PassageApp can be instantiated', () => {
@@ -145,14 +164,14 @@ describe('PassageApp', () => {
         app.start();
         app.start();
         assert.equal(app.isRunning, true, 'App should still be running after double start');
-        assert.ok(consoleLogs.some(log => log.includes('already running')), 'Should warn about double start');
+        assert.ok(global.console.getLogs().some(log => log.includes('already running')), 'Should warn about double start');
         
         // Double stop should log warning
-        consoleLogs = []; // Reset logs
+        global.console.resetMock(); // Reset logs
         app.stop();
         app.stop();
         assert.equal(app.isRunning, false, 'App should still be stopped after double stop');
-        assert.ok(consoleLogs.some(log => log.includes('not running')), 'Should warn about double stop');
+        assert.ok(global.console.getLogs().some(log => log.includes('not running')), 'Should warn about double stop');
     });
     
     test('App loop logs elapsed time when not reduced motion', () => {
@@ -162,18 +181,19 @@ describe('PassageApp', () => {
         global.window.matchMedia = () => ({ matches: false });
         const app = new PassageApp();
         
-        mockTime = 1000;
+        global.performance.setTime(1000);
         app.start();
         
         // Simulate time passage and trigger loop
-        mockTime = 1500; // 0.5 seconds later
-        global.timeManager.getElapsedSeconds = () => (mockTime - 1000) / 1000;
+        global.performance.setTime(1500); // 0.5 seconds later
+        global.timeManager.getElapsedSeconds = () => (global.performance.getTime() - 1000) / 1000;
         
+        const rafCallbacks = global.requestAnimationFrame.getCallbacks();
         if (rafCallbacks[app.animationFrameId]) {
             rafCallbacks[app.animationFrameId]();
         }
         
-        const elapsedLogs = consoleLogs.filter(log => log.includes('Elapsed:'));
+        const elapsedLogs = global.console.getLogs().filter(log => log.includes('Elapsed:'));
         assert.ok(elapsedLogs.length > 0, 'Should log elapsed time');
         assert.ok(elapsedLogs.some(log => log.includes('Elapsed:')), 'Should contain elapsed time log');
         
