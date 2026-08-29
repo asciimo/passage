@@ -1,0 +1,39 @@
+services:
+  # Development service - runs tests before starting
+  passage-dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "npm test && 
+             echo 'Tests passed! Starting development server...' &&
+             npx http-server . -p 3000 -c-1 --cors"
+    environment:
+      - NODE_ENV=development
+
+  # Production service - optimized static serving
+  passage:
+    build:
+      context: .
+      target: production
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  # Test-only service - runs tests and exits
+  passage-test:
+    build:
+      context: .
+      target: test
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
