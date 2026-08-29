@@ -5,9 +5,18 @@ A single-file, framework-free web app that visualizes time using a grid of falli
 ## Getting Started
 
 ### Quick Start (Local Development)
-1. Open `index.html` in a web browser
-2. The app will automatically start and log elapsed time to the console
-3. Open browser developer tools to see the console output
+```bash
+npm install
+npm run dev        # serves on http://localhost:3000
+```
+
+Then open http://localhost:3000 and check the browser console for the elapsed-time
+output.
+
+The app **must be served over HTTP** — it loads its modules with
+`<script type="module">`, and browsers block ES module loading from `file://`
+because an opaque origin fails the CORS check. `npm run dev` starts a small
+static server built on Node builtins (`scripts/serve.js`); no dependency needed.
 
 ### Docker Deployment
 
@@ -53,10 +62,10 @@ npm install
 ```
 
 ### Build / Run / Test
-- Static site: open `index.html`
+- Serve locally: `npm run dev` (http://localhost:3000)
 - Lint: `npm run lint`
 - Unit tests: `npm test`
-- E2E tests (future): `npm run test:e2e`
+- E2E tests: `npm run test:e2e` (first run needs `npx playwright install chromium`)
 
 ### Docker Services
 - `passage`: Production nginx-based container (port 8080)
@@ -79,6 +88,7 @@ npm install
 - `Dockerfile` - Multi-stage Docker configuration
 - `docker-compose.yml` - Docker Compose services
 - `nginx.conf` - Production nginx configuration
+- `scripts/serve.js` - Dependency-free static server for local development
 
 ## Features
 

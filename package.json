@@ -8,7 +8,7 @@
     "lint": "eslint *.js",
     "test": "node --test test/*.test.js",
     "test:e2e": "playwright test",
-    "dev": "echo 'Open index.html in your browser to run the app'"
+    "dev": "node scripts/serve.js"
   },
   "keywords": ["time", "visualization", "vanilla-js", "animation"],
   "author": "",
