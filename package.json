@@ -5,7 +5,7 @@
   "main": "index.html",
   "type": "module",
   "scripts": {
-    "lint": "eslint *.js",
+    "lint": "eslint . --max-warnings=0",
     "test": "node --test test/*.test.js",
     "test:e2e": "playwright test",
     "dev": "node scripts/serve.js"
