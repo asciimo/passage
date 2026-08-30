@@ -12,10 +12,14 @@ global.document = {
     getElementById: () => mockElement
 };
 
+// Default stub; resetTestState() reinstalls this before every test so a test
+// that overrides matchMedia cannot leak its preference into later tests.
+const defaultMatchMedia = (query) => ({
+    matches: query.includes('reduce') ? false : true // Default to not reduced motion
+});
+
 global.window = {
-    matchMedia: (query) => ({ 
-        matches: query.includes('reduce') ? false : true // Default to not reduced motion
-    })
+    matchMedia: defaultMatchMedia
 };
 
 let rafCallbacks = [];
@@ -70,12 +74,16 @@ global.performance = {
 };
 
 // Mock the global instances that the app depends on
+const defaultGetElapsedSeconds = () => (global.performance.getTime() - 1000) / 1000;
+
 global.timeManager = {
-    getElapsedSeconds: () => (global.performance.getTime() - 1000) / 1000,
+    getElapsedSeconds: defaultGetElapsedSeconds,
     getDeltaSeconds: () => 0.016,
     reset: () => {},
     resetMock: function() {
-        // Reset any internal mock state if needed
+        // Tests override getElapsedSeconds to drive the clock; restore it so the
+        // override does not carry into the next test.
+        this.getElapsedSeconds = defaultGetElapsedSeconds;
     }
 };
 
@@ -92,7 +100,9 @@ global.passageRenderer = {
 import { PassageApp } from '../app.js';
 
 describe('PassageApp', () => {
-    // Reset global state before each test
+    // Reset global state before each test. Every test must call this first —
+    // the mocks are module-level singletons, so anything a test overrides
+    // (matchMedia, the elapsed-time stub) otherwise persists into the next one.
     function resetTestState() {
         // Reset mocks using their reset methods
         global.performance.resetMock();
@@ -100,6 +110,25 @@ describe('PassageApp', () => {
         global.console.resetMock();
         global.timeManager.resetMock();
         global.passageRenderer.resetMock();
+        global.window.matchMedia = defaultMatchMedia;
+    }
+
+    /**
+     * Run one iteration of the app's RAF loop.
+     */
+    function tick(app) {
+        const callbacks = global.requestAnimationFrame.getCallbacks();
+        const callback = callbacks[app.animationFrameId];
+        if (callback) {
+            callback();
+        }
+    }
+
+    /**
+     * Elapsed-time logs emitted so far, e.g. ['Elapsed: 0s', 'Elapsed: 1s'].
+     */
+    function elapsedLogs() {
+        return global.console.getLogs().filter(log => log.includes('Elapsed:'));
     }
     
     test('PassageApp can be instantiated', () => {
@@ -147,11 +176,13 @@ describe('PassageApp', () => {
     });
     
     test('App respects reduced motion preference', () => {
+        resetTestState();
+
         // Mock reduced motion preference
-        global.window.matchMedia = (query) => ({ 
-            matches: query.includes('reduce') ? true : false 
+        global.window.matchMedia = (query) => ({
+            matches: query.includes('reduce') ? true : false
         });
-        
+
         const app = new PassageApp();
         assert.equal(app.respectsReducedMotion, true, 'App should respect reduced motion preference');
     });
@@ -174,29 +205,89 @@ describe('PassageApp', () => {
         assert.ok(global.console.getLogs().some(log => log.includes('not running')), 'Should warn about double stop');
     });
     
-    test('App loop logs elapsed time when not reduced motion', () => {
+    test('App loop logs elapsed time', () => {
         resetTestState();
-        
-        // Ensure not reduced motion
-        global.window.matchMedia = () => ({ matches: false });
         const app = new PassageApp();
-        
+
+        global.performance.setTime(1000);
+        app.start(); // start() runs the first iteration itself
+
+        assert.deepEqual(elapsedLogs(), ['Elapsed: 0s'], 'Should log elapsed time on the first frame');
+
+        app.stop();
+    });
+
+    test('App logs at most once per whole second', () => {
+        resetTestState();
+        const app = new PassageApp();
+
         global.performance.setTime(1000);
         app.start();
-        
-        // Simulate time passage and trigger loop
-        global.performance.setTime(1500); // 0.5 seconds later
-        global.timeManager.getElapsedSeconds = () => (global.performance.getTime() - 1000) / 1000;
-        
-        const rafCallbacks = global.requestAnimationFrame.getCallbacks();
-        if (rafCallbacks[app.animationFrameId]) {
-            rafCallbacks[app.animationFrameId]();
+
+        // Four more frames within the same second should not log again
+        for (const time of [1016, 1032, 1500, 1999]) {
+            global.performance.setTime(time);
+            tick(app);
         }
-        
-        const elapsedLogs = global.console.getLogs().filter(log => log.includes('Elapsed:'));
-        assert.ok(elapsedLogs.length > 0, 'Should log elapsed time');
-        assert.ok(elapsedLogs.some(log => log.includes('Elapsed:')), 'Should contain elapsed time log');
-        
+        assert.deepEqual(
+            elapsedLogs(),
+            ['Elapsed: 0s'],
+            'Frames within the same second should not log again'
+        );
+
+        // Crossing into the next second logs exactly once more
+        global.performance.setTime(2000);
+        tick(app);
+        global.performance.setTime(2500);
+        tick(app);
+        assert.deepEqual(
+            elapsedLogs(),
+            ['Elapsed: 0s', 'Elapsed: 1s'],
+            'Crossing a second boundary should log exactly once'
+        );
+
+        app.stop();
+    });
+
+    test('App logs regardless of reduced motion preference', () => {
+        resetTestState();
+
+        // Reduced motion governs animation, not console output
+        global.window.matchMedia = () => ({ matches: true });
+        const app = new PassageApp();
+
+        global.performance.setTime(1000);
+        app.start();
+
+        assert.deepEqual(
+            elapsedLogs(),
+            ['Elapsed: 0s'],
+            'Reduced-motion users should still get elapsed-time output'
+        );
+
+        app.stop();
+    });
+
+    test('Restart resets the log throttle', () => {
+        resetTestState();
+        const app = new PassageApp();
+
+        global.performance.setTime(1000);
+        app.start();
+        global.performance.setTime(5000); // 4 seconds later
+        tick(app);
+        assert.deepEqual(elapsedLogs(), ['Elapsed: 0s', 'Elapsed: 4s']);
+
+        // timeManager.reset() is stubbed, so drive the clock back to the origin
+        // to mimic a real reset before restarting.
+        global.performance.setTime(1000);
+        app.restart();
+        assert.deepEqual(
+            elapsedLogs(),
+            ['Elapsed: 0s', 'Elapsed: 4s', 'Elapsed: 0s'],
+            'Restart should log second 0 again rather than suppressing it'
+        );
+
         app.stop();
     });
 });

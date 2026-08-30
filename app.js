@@ -7,6 +7,8 @@ class PassageApp {
         this.isRunning = false;
         this.animationFrameId = null;
         this.respectsReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // -1 so the first frame always logs
+        this.lastLoggedSecond = -1;
     }
     
     /**
@@ -59,6 +61,7 @@ class PassageApp {
     restart() {
         this.stop();
         timeManager.reset();
+        this.lastLoggedSecond = -1;
         this.start();
         console.log('Passage app restarted');
     }
@@ -106,9 +109,13 @@ class PassageApp {
         const deltaTime = timeManager.getDeltaSeconds();
         const elapsedTime = timeManager.getElapsedSeconds();
         
-        // Log elapsed seconds to console as required (but respect reduced motion)
-        if (!this.respectsReducedMotion) {
-            console.log(`Elapsed: ${elapsedTime.toFixed(2)}s`);
+        // Log once per whole second, not once per frame — logging at 60Hz costs
+        // far more than the ≤3–5% CPU budget allows. Deliberately not gated on
+        // reduced motion: that preference governs animation, not console output.
+        const currentSecond = Math.floor(elapsedTime);
+        if (currentSecond !== this.lastLoggedSecond) {
+            this.lastLoggedSecond = currentSecond;
+            console.log(`Elapsed: ${currentSecond}s`);
         }
         
         // Render frame
