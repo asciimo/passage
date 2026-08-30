@@ -45,9 +45,17 @@ The modules use a **dual global/export pattern** that is easy to break:
 - `app.js` reads those singletons as bare globals — it does **not** import them. The `<script>` order in `index.html` is therefore load-bearing, and the singleton names are declared in `.eslintrc.json`'s `globals` block.
 - `app.js` self-starts on `DOMContentLoaded`, guarded by `typeof document !== 'undefined'` so importing it under Node doesn't launch the app.
 
+**New modules should not extend that pattern.** `layout.js` (PSG-04) exports plain
+functions and is imported normally by `passage.js` — no singleton, no `globalThis`,
+no `<script>` tag in `index.html` (the browser resolves the import). The singleton
+pattern exists only because `app.js` reads globals instead of importing; anything
+with no shared instance state should just be an ordinary module.
+
 Consequence for tests: `test/app.test.js` must install `global.document`, `global.window.matchMedia`, `global.requestAnimationFrame`, `global.performance`, and stub `global.timeManager` / `global.passageRenderer` **before** the `import` of `app.js`. Node hoists imports, so the mocks live at module top level in statement order, not inside a `beforeEach`. Those mocks are singletons: anything a test overrides must be reinstalled in `resetTestState()`, or it leaks into every later test. `test/e2e/load.spec.js` guards the same pattern from the browser side.
 
-`TimeManager` is the only real logic today: `performance.now()`-based `getElapsedSeconds()` / `getDeltaSeconds()` / `reset()`. Tests replace `global.performance` with a controllable fake clock — never use real timers.
+`TimeManager` is `performance.now()`-based: `getElapsedSeconds()` / `getDeltaSeconds()` / `reset()`. Tests replace `global.performance` with a controllable fake clock — never use real timers.
+
+`layout.js` holds the sizing math (PSG-04): `computeCadence()` picks seconds-per-square from the duration tiers, and `computeLayout()` returns `{squareCount, cadenceSec, unitPx, columns, rows}` for a session and viewport. It is pure and deterministic — PSG-03's erosion order depends on identical inputs always yielding the same grid. When a grid overflows, it shrinks `unitPx` toward the 12px floor first and only then slows the cadence.
 
 ## Constraints (from `.github/copilot-instructions.md` and the spec)
 
