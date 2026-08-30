@@ -6,7 +6,7 @@ steps:
   - name: Setup Node
     uses: actions/setup-node@v4
     with:
-      node-version: '22'
+      node-version-file: '.nvmrc'
 
   - name: Cache node_modules
     uses: actions/cache@v4

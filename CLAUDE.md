@@ -10,7 +10,11 @@ Current state: only the skeleton (PSG-01) is implemented — a RAF loop that log
 
 ## Commands
 
-Node is installed via nvm and is **not** on the default non-interactive PATH. Prefix commands with:
+The Node version is pinned in `.nvmrc` (22); both workflows read it via
+`node-version-file`, so CI and local stay in step. Run `nvm use` once per shell.
+
+Node is installed via nvm and is **not** on the default non-interactive PATH, so
+for a one-off non-interactive command prefix it with:
 `export PATH="$HOME/.nvm/versions/node/v22.19.0/bin:$PATH"`
 
 ```bash
